@@ -742,7 +742,7 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, totalEnrolledC
     if(!isNaN(hr)){
       if(!agentHourMap[r._name]) agentHourMap[r._name]={};
       const hk=String(hr).padStart(2,'0')+':00';
-      if(!agentHourMap[r._name][hk]) agentHourMap[r._name][hk]={calls:0,short:0,lt2m:0,b2to10m:0,gt15m:0,gt30m:0,sec:0,enr:0};
+      if(!agentHourMap[r._name][hk]) agentHourMap[r._name][hk]={calls:0,short:0,lt2m:0,b2to10m:0,gt15m:0,gt30m:0,sec:0,enr:0,phoneFirstDir:{}};
       const h=agentHourMap[r._name][hk]; h.calls++; h.sec+=r._sec;
       if(r._sec<=30) h.short++;
       if(r._sec<120) h.lt2m++;
@@ -750,6 +750,11 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, totalEnrolledC
       if(r._sec>900) h.gt15m++;
       if(r._sec>1800) h.gt30m++;
       if(r._enrolled) h.enr++;
+      if(r._phone){
+        const ts=parseTs(r['call_date']||r['date']||'');
+        if(!h.phoneFirstDir[r._phone]||ts<h.phoneFirstDir[r._phone].ts)
+          h.phoneFirstDir[r._phone]={dir:r._dir,ts};
+      }
     }
   });
 
@@ -782,9 +787,9 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, totalEnrolledC
       return `<tr class="agent-hour-row" style="display:none" data-parent="${rowId}">
         <td style="text-align:left;padding-left:32px;color:var(--text-muted);font-size:11px">↳ ${hk}</td>
         <td>${h.calls}</td>
-        <td>—</td>
-        <td>—</td>
-        <td>—</td>
+        <td>${Object.keys(h.phoneFirstDir||{}).length||'—'}</td>
+        <td style="color:var(--blue)">${Object.values(h.phoneFirstDir||{}).filter(v=>v.dir==='inbound').length||'—'}</td>
+        <td>${Object.values(h.phoneFirstDir||{}).filter(v=>v.dir!=='inbound').length||'—'}</td>
         <td>${hShortPct}%</td>
         <td>${h.lt2m}</td>
         <td>${h.b2to10m}</td>
