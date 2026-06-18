@@ -236,21 +236,21 @@ tbody td:first-child{text-align:left;font-weight:600;color:var(--text)}
     <div class="card-title">Agent performance <span class="card-title-sub" id="agentCount"></span></div>
     <div class="tbl-wrap">
       <table id="agentTable">
-        <thead>
+        <thead id="agentHead">
           <tr>
-            <th style="text-align:left;min-width:160px">Agent</th>
-            <th>Calls</th>
-            <th>Unique #s</th>
-            <th>Short% ≤30s</th>
-            <th>&lt;2 min</th>
-            <th>2–10 min</th>
-            <th>&gt;15 min</th>
-            <th>&gt;30 min</th>
-            <th>Avg Talk</th>
-            <th>Total Talk</th>
-            <th>Enrolled</th>
-            <th>Debt $</th>
-            <th>Conv% (enr/>15m)</th>
+            <th style="text-align:left;min-width:160px" data-col="0">Agent</th>
+            <th data-col="1">Calls</th>
+            <th data-col="2">Unique #s</th>
+            <th data-col="3">Short% ≤30s</th>
+            <th data-col="4">&lt;2 min</th>
+            <th data-col="5">2–10 min</th>
+            <th data-col="6">&gt;15 min</th>
+            <th data-col="7">&gt;30 min</th>
+            <th data-col="8">Avg Talk</th>
+            <th data-col="9">Total Talk</th>
+            <th data-col="10">Enrolled</th>
+            <th data-col="11">Debt $</th>
+            <th data-col="12">Conv% (enr/>15m)</th>
           </tr>
         </thead>
         <tbody id="agentBody"></tbody>
@@ -819,6 +819,39 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, totalEnrolledC
     <td>${agTot.debt>0?fmt$(agTot.debt):'—'}</td>
     <td>—</td>
   </tr>`;
+
+  // ── Agent table column sorting ──
+  (function(){
+    const thead=document.getElementById('agentHead');
+    const tbody=document.getElementById('agentBody');
+    let sortCol=-1,sortDir=1;
+    function cellVal(td){
+      const n=parseFloat(td.textContent.replace(/[^0-9.\-]/g,''));
+      return isNaN(n)?td.textContent.trim().toLowerCase():n;
+    }
+    thead.querySelectorAll('th[data-col]').forEach(th=>{
+      th.addEventListener('click',()=>{
+        const col=parseInt(th.dataset.col);
+        if(sortCol===col) sortDir*=-1; else{sortCol=col;sortDir=-1;}
+        thead.querySelectorAll('th').forEach(h=>h.classList.remove('sort-asc','sort-desc'));
+        th.classList.add(sortDir===1?'sort-asc':'sort-desc');
+        // only sort main rows; keep total row at bottom; keep hour sub-rows with their parent
+        const allRows=[...tbody.querySelectorAll('tr')];
+        const totRow=allRows.find(r=>r.style.fontWeight==='700'||r.querySelector('td')?.textContent==='TOTAL');
+        const mainRows=allRows.filter(r=>r.classList.contains('agent-main-row'));
+        mainRows.sort((a,b)=>{
+          const av=cellVal(a.cells[col]),bv=cellVal(b.cells[col]);
+          return av<bv?-sortDir:av>bv?sortDir:0;
+        });
+        mainRows.forEach(main=>{
+          tbody.appendChild(main);
+          const pid=main.id;
+          allRows.filter(r=>r.dataset.parent===pid).forEach(sub=>tbody.appendChild(sub));
+        });
+        if(totRow) tbody.appendChild(totRow);
+      });
+    });
+  })();
 
   // ── Campaign table ──
   const campMap={};
