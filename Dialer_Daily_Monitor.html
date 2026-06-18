@@ -618,6 +618,7 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
   calls.forEach(r=>{if(r._phone&&r._sec>(phoneBest[r._phone]||0)) phoneBest[r._phone]=r._sec;});
   const gt15mUnique=Object.values(phoneBest).filter(s=>s>900).length;
   const gt30mUnique=Object.values(phoneBest).filter(s=>s>1800).length;
+  const gt45mUnique=Object.values(phoneBest).filter(s=>s>2700).length;
   const gt15m=calls.filter(r=>r._sec>900).length;
   const gt30m=calls.filter(r=>r._sec>1800).length;
   const deadCalls=calls.filter(r=>r._sec<=30).length;
@@ -642,6 +643,7 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
     {label:'2 – 10 Min',val:b2to10m.toLocaleString(),sub:pct(b2to10m,total)+' of total',cls:'amber'},
     {label:'> 15 Min',val:gt15mUnique.toLocaleString(),sub:pct(gt15mUnique,uniquePhones)+' of unique calls',cls:'green'},
     {label:'> 30 Min',val:gt30mUnique.toLocaleString(),sub:pct(gt30mUnique,uniquePhones)+' of unique calls',cls:'purple'},
+    {label:'> 45 Min',val:gt45mUnique.toLocaleString(),sub:pct(gt45mUnique,uniquePhones)+' of unique calls',cls:'purple'},
     {label:'Total Talk Time',val:fmtDur(totalSec),sub:'all agents',cls:'blue'},
   ];
   document.getElementById('kpiGrid').innerHTML=kpiData.map(k=>`
