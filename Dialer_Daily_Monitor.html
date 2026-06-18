@@ -370,10 +370,10 @@ function fmtDur(s){
   return m+'m '+String(sc).padStart(2,'0')+'s';
 }
 function pct(n,d){ return d?((n/d)*100).toFixed(1)+'%':'0%'; }
-function funnelCell(val,prev){
-  const drop=prev>0?Math.round((prev-val)/prev*100):null;
-  const dropStr=drop!==null?`<div style="font-size:9px;color:var(--red);margin-top:1px">↓ ${drop}%</div>`:'';
-  return `${val}${dropStr}`;
+function funnelCell(val,denom,color){
+  if(!color||!denom) return val;
+  const p=Math.round(val/denom*100);
+  return `${val}<div style="font-size:9px;color:${color};margin-top:1px">${p}%</div>`;
 }
 function fmt$(n){ return '$'+Math.round(n).toLocaleString(); }
 const OPENERS=new Set(['spencer porterfield','abdelrhaman nianaa','mohamad dadou','stanley randolph','riley malone','jon stults','liz arredondo','lindsey magnusen','jaiden lopez','logan apana','brian smith','walter urbina','tabitha jaggers','rachel calderon','mercy morse','joselyn lorenzo','joseph nassif','alexander tulkoff','darrin ford']);
@@ -807,12 +807,12 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
         <td style="color:var(--blue)">${Object.values(h.phoneFirstDir||{}).filter(v=>v.dir==='inbound').length||'—'}</td>
         <td>${Object.values(h.phoneFirstDir||{}).filter(v=>v.dir!=='inbound').length||'—'}</td>
         <td>${hShortPct}%</td>
-        <td>${funnelCell(h.lt2m,h.calls)}</td>
-        <td>${funnelCell(h.gt2m,h.calls)}</td>
-        <td>${funnelCell(h.gt5m,h.gt2m)}</td>
-        <td>${funnelCell(h.gt10m,h.gt5m)}</td>
-        <td>${funnelCell(h.gt15m,h.gt10m)}</td>
-        <td>${funnelCell(h.gt30m,h.gt15m)}</td>
+        <td>${funnelCell(h.lt2m,h.calls,"var(--red)")}</td>
+        <td>${funnelCell(h.gt2m,0,null)}</td>
+        <td>${funnelCell(h.gt5m,0,null)}</td>
+        <td>${funnelCell(h.gt10m,0,null)}</td>
+        <td>${funnelCell(h.gt15m,h.calls,"var(--green-dk)")}</td>
+        <td>${funnelCell(h.gt30m,h.calls,"var(--green-dk)")}</td>
         <td>${fmtDur(h.calls?Math.round(h.sec/h.calls):0)}</td>
         <td>${fmtDur(h.sec)}</td>
         <td class="${h.enr>0?'enroll-num':'enroll-zero'}">${h.enr||'—'}</td>
@@ -828,12 +828,12 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
       <td style="color:var(--blue)">${a.inboundUniq}</td>
       <td style="color:var(--text-muted)">${a.outboundUniq}</td>
       <td><div class="bar-mini"><div class="bar-bg"><div class="bar-fg ${shortCls}" style="width:${a.shortPct.toFixed(0)}%"></div></div>${a.shortPct.toFixed(0)}%</div></td>
-      <td>${funnelCell(a.lt2m,a.calls)}</td>
-      <td>${funnelCell(a.gt2m,a.calls)}</td>
-      <td>${funnelCell(a.gt5m,a.gt2m)}</td>
-      <td>${funnelCell(a.gt10m,a.gt5m)}</td>
-      <td>${funnelCell(a.gt15m,a.gt10m)}</td>
-      <td>${funnelCell(a.gt30m,a.gt15m)}</td>
+      <td>${funnelCell(a.lt2m,a.calls,"var(--red)")}</td>
+      <td>${funnelCell(a.gt2m,0,null)}</td>
+      <td>${funnelCell(a.gt5m,0,null)}</td>
+      <td>${funnelCell(a.gt10m,0,null)}</td>
+      <td>${funnelCell(a.gt15m,a.calls,"var(--green-dk)")}</td>
+      <td>${funnelCell(a.gt30m,a.calls,"var(--green-dk)")}</td>
       <td>${fmtDur(a.avg)}</td>
       <td>${fmtDur(a.sec)}</td>
       <td class="${a.enr>0?'enroll-num':'enroll-zero'}">${a.enr>0?`<span style="cursor:pointer;text-decoration:underline dotted" onclick="toggleEl('enr-${rowId}')">${a.enr}</span><div id="enr-${rowId}" style="display:none;font-size:10px;font-family:monospace;font-weight:400;color:var(--text-muted);margin-top:3px">${(agentEnrollPhones[a.name.toLowerCase()]||[]).join('<br>')}</div>`:'—'}</td>
@@ -857,12 +857,12 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
     <td>—</td>
     <td>—</td>
     <td>${agTotShortPct.toFixed(0)}%</td>
-    <td>${funnelCell(agTot.lt2m,agTot.calls)}</td>
-    <td>${funnelCell(agTot.gt2m,agTot.calls)}</td>
-    <td>${funnelCell(agTot.gt5m,agTot.gt2m)}</td>
-    <td>${funnelCell(agTot.gt10m,agTot.gt5m)}</td>
-    <td>${funnelCell(agTot.gt15m,agTot.gt10m)}</td>
-    <td>${funnelCell(agTot.gt30m,agTot.gt15m)}</td>
+    <td>${funnelCell(agTot.lt2m,agTot.calls,"var(--red)")}</td>
+    <td>${funnelCell(agTot.gt2m,0,null)}</td>
+    <td>${funnelCell(agTot.gt5m,0,null)}</td>
+    <td>${funnelCell(agTot.gt10m,0,null)}</td>
+    <td>${funnelCell(agTot.gt15m,agTot.calls,"var(--green-dk)")}</td>
+    <td>${funnelCell(agTot.gt30m,agTot.calls,"var(--green-dk)")}</td>
     <td>—</td>
     <td>${fmtDur(agTot.sec)}</td>
     <td>${agTot.enr||'—'}</td>
@@ -945,12 +945,12 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
         <td style="text-align:left;padding-left:32px;color:var(--text-muted);font-size:11px">↳ ${ag}${OPENERS.has(ag.toLowerCase())?'<span class="tag-opener">Opener</span>':''}</td>
         <td>${a.calls}</td>
         <td>${a.short} <span style="color:var(--text-muted);font-size:11px">${pct(a.short,a.calls)}</span></td>
-        <td>${funnelCell(a.lt2m,a.calls)}</td>
-        <td>${funnelCell(a.gt2m,a.calls)}</td>
-        <td>${funnelCell(a.gt5m,a.gt2m)}</td>
-        <td>${funnelCell(a.gt10m,a.gt5m)}</td>
-        <td>${funnelCell(a.gt15m,a.gt10m)}</td>
-        <td>${funnelCell(a.gt30m,a.gt15m)}</td>
+        <td>${funnelCell(a.lt2m,a.calls,"var(--red)")}</td>
+        <td>${funnelCell(a.gt2m,0,null)}</td>
+        <td>${funnelCell(a.gt5m,0,null)}</td>
+        <td>${funnelCell(a.gt10m,0,null)}</td>
+        <td>${funnelCell(a.gt15m,a.calls,"var(--green-dk)")}</td>
+        <td>${funnelCell(a.gt30m,a.calls,"var(--green-dk)")}</td>
         <td>${a.drops>0?'<span style="color:var(--red);font-weight:600">'+a.drops+'</span>':'—'}</td>
         <td>${fmtDur(a.calls?Math.round(a.sec/a.calls):0)}</td>
         <td class="${a.enroll>0?'enroll-num':'enroll-zero'}">${a.enroll||'—'}</td>
@@ -959,12 +959,12 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
       <td style="text-align:left"><span class="agent-toggle" id="tog-${rowId}">▶</span> ${camp}</td>
       <td>${d.calls}</td>
       <td>${d.short} <span style="color:var(--text-muted);font-size:11px">${pct(d.short,d.calls)}</span></td>
-      <td>${funnelCell(d.lt2m,d.calls)}</td>
-      <td>${funnelCell(d.gt2m,d.calls)}</td>
-      <td>${funnelCell(d.gt5m,d.gt2m)}</td>
-      <td>${funnelCell(d.gt10m,d.gt5m)}</td>
-      <td>${funnelCell(d.gt15m,d.gt10m)}</td>
-      <td>${funnelCell(d.gt30m,d.gt15m)}</td>
+      <td>${funnelCell(d.lt2m,d.calls,"var(--red)")}</td>
+      <td>${funnelCell(d.gt2m,0,null)}</td>
+      <td>${funnelCell(d.gt5m,0,null)}</td>
+      <td>${funnelCell(d.gt10m,0,null)}</td>
+      <td>${funnelCell(d.gt15m,d.calls,"var(--green-dk)")}</td>
+      <td>${funnelCell(d.gt30m,d.calls,"var(--green-dk)")}</td>
       <td>${d.drops>0?'<span style="color:var(--red);font-weight:600">'+d.drops+'</span>':'—'}</td>
       <td>${fmtDur(d.calls?Math.round(d.sec/d.calls):0)}</td>
       <td class="${d.enroll>0?'enroll-num':'enroll-zero'}">${d.enroll||'—'}</td>
@@ -982,12 +982,12 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
     <td style="text-align:left">TOTAL</td>
     <td>${cTot.calls}</td>
     <td>${cTot.short} <span style="color:var(--text-muted);font-size:11px">${pct(cTot.short,cTot.calls)}</span></td>
-    <td>${funnelCell(cTot.lt2m,cTot.calls)}</td>
-    <td>${funnelCell(cTot.gt2m,cTot.calls)}</td>
-    <td>${funnelCell(cTot.gt5m,cTot.gt2m)}</td>
-    <td>${funnelCell(cTot.gt10m,cTot.gt5m)}</td>
-    <td>${funnelCell(cTot.gt15m,cTot.gt10m)}</td>
-    <td>${funnelCell(cTot.gt30m,cTot.gt15m)}</td>
+    <td>${funnelCell(cTot.lt2m,cTot.calls,"var(--red)")}</td>
+    <td>${funnelCell(cTot.gt2m,0,null)}</td>
+    <td>${funnelCell(cTot.gt5m,0,null)}</td>
+    <td>${funnelCell(cTot.gt10m,0,null)}</td>
+    <td>${funnelCell(cTot.gt15m,cTot.calls,"var(--green-dk)")}</td>
+    <td>${funnelCell(cTot.gt30m,cTot.calls,"var(--green-dk)")}</td>
     <td>${cTot.drops>0?'<span style="color:var(--red);font-weight:600">'+cTot.drops+'</span>':'—'}</td>
     <td>${fmtDur(cTot.calls?Math.round(cTot.sec/cTot.calls):0)}</td>
     <td class="${cTot.enroll>0?'enroll-num':'enroll-zero'}">${cTot.enroll||'—'}</td>
