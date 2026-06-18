@@ -534,21 +534,24 @@ function runAnalysis(){
 
   // Per-agent enrollment credit: {agentName → {count, debt}}
   const agentEnrollCredit={};
-  Object.values(enrolledPhoneAgent).forEach(({agent,debt})=>{
+  const agentEnrollPhones={};
+  Object.entries(enrolledPhoneAgent).forEach(([phone,{agent,debt}])=>{
     const k=agent.toLowerCase();
     if(!agentEnrollCredit[k]) agentEnrollCredit[k]={count:0,debt:0};
     agentEnrollCredit[k].count++;
     agentEnrollCredit[k].debt+=debt;
+    if(!agentEnrollPhones[k]) agentEnrollPhones[k]=[];
+    agentEnrollPhones[k].push(phone);
   });
 
   document.getElementById('hdrDate').textContent=dateStr;
   document.getElementById('filterHint').textContent=
     calls.length.toLocaleString()+' calls · '+totalEnrolledCount+' enrollments on '+dateStr;
 
-  buildDashboard(calls, enrolledPhones, agentEnrollCredit, totalEnrolledCount, totalDebtSum, dateStr);
+  buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPhones, totalEnrolledCount, totalDebtSum, dateStr);
 }
 
-function buildDashboard(calls, enrolledPhones, agentEnrollCredit, totalEnrolledCount, totalDebtSum, dateStr){
+function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPhones, totalEnrolledCount, totalDebtSum, dateStr){
   // Normalize call fields
   calls.forEach(r=>{
     r._sec=parseInt(r['length_in_sec']||r['duration']||r['Duration']||r['talk_sec']||0,10)||0;
@@ -816,7 +819,7 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, totalEnrolledC
       <td>${a.gt30m}</td>
       <td>${fmtDur(a.avg)}</td>
       <td>${fmtDur(a.sec)}</td>
-      <td class="${a.enr>0?'enroll-num':'enroll-zero'}">${a.enr||'—'}</td>
+      <td class="${a.enr>0?'enroll-num':'enroll-zero'}">${a.enr>0?`<span style="cursor:pointer;text-decoration:underline dotted" onclick="toggleEl('enr-${rowId}')">${a.enr}</span><div id="enr-${rowId}" style="display:none;font-size:10px;font-family:monospace;font-weight:400;color:var(--text-muted);margin-top:3px">${(agentEnrollPhones[a.name.toLowerCase()]||[]).join('<br>')}</div>`:'—'}</td>
       <td>${a.debt>0?fmt$(a.debt):'—'}</td>
       <td>${convPct}</td>
     </tr>${hourRows}`;
