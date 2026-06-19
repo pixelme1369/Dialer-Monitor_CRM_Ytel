@@ -117,6 +117,9 @@ tbody td:first-child{text-align:left;font-weight:600;color:var(--text)}
 .agent-hour-row td{background:var(--gray-50);font-size:11px;color:var(--text-muted)}
 .camp-agent-row td{background:var(--gray-50);font-size:11px;color:var(--text-muted)}
 .tag-opener{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:1px 6px;border-radius:10px;background:#FEF3C7;color:#92400E;margin-left:4px;vertical-align:middle}
+.af-btn{font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;border:1px solid var(--border);background:var(--gray-100);color:var(--text-muted);cursor:pointer;transition:all .15s}
+.af-btn:hover{background:var(--gray-200)}
+.af-btn.af-active{background:var(--navy);color:#fff;border-color:var(--navy)}
 .bar-mini{display:inline-flex;align-items:center;gap:5px}
 .bar-bg{background:var(--gray-200);border-radius:3px;height:6px;width:60px;overflow:hidden;display:inline-block;vertical-align:middle}
 .bar-fg{height:100%;border-radius:3px;background:var(--blue)}
@@ -239,7 +242,14 @@ tbody td:first-child{text-align:left;font-weight:600;color:var(--text)}
 
   <!-- AGENT TABLE -->
   <div class="card">
-    <div class="card-title">Agent performance <span class="card-title-sub" id="agentCount"></span></div>
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span>Agent performance <span class="card-title-sub" id="agentCount"></span></span>
+      <div id="agentFilterBtns" style="display:flex;gap:6px">
+        <button onclick="filterAgents('all')"    id="af-all"    class="af-btn af-active">All</button>
+        <button onclick="filterAgents('closer')" id="af-closer" class="af-btn">Closers</button>
+        <button onclick="filterAgents('opener')" id="af-opener" class="af-btn">Openers</button>
+      </div>
+    </div>
     <div class="tbl-wrap">
       <table id="agentTable">
         <thead id="agentHead">
@@ -418,6 +428,25 @@ function funnelCell(val,denom,color){
 }
 function fmt$(n){ return '$'+Math.round(n).toLocaleString(); }
 const CLOSERS=new Set(['peter godwin','adam elqaza','diego acuna','alon yomora','abed al serwan','josh hallwork','toha serwan','parth desai','robert whitmer','alexander wahlberg','artin namjoo','omar tayara','aj valipour','tyler mason','neka bullock','don bell','faisal habhab','amir moayeri','daniel arreola','shayan bakhoda','chuvar maestas','eileen beeson','logan insuaste','paul sims','john tade','dylan gallagher','lindsey magnusen','angel espraza','logan apana','brian smith','emren salim']);
+function filterAgents(type){
+  document.querySelectorAll('.af-btn').forEach(b=>b.classList.remove('af-active'));
+  document.getElementById('af-'+type).classList.add('af-active');
+  const tbody=document.getElementById('agentBody');
+  if(!tbody) return;
+  tbody.querySelectorAll('tr.agent-main-row').forEach(row=>{
+    const nameCell=row.querySelector('td:first-child');
+    const name=(nameCell?.textContent||'').trim().replace(/[▶▼]/,'').replace('Opener','').trim().toLowerCase();
+    const isOpener=!CLOSERS.has(name);
+    let show=true;
+    if(type==='closer') show=!isOpener;
+    if(type==='opener') show=isOpener;
+    row.style.display=show?'':'none';
+    // hide/show hourly sub-rows too
+    if(row.id) document.querySelectorAll('[data-parent="'+row.id+'"]').forEach(sub=>sub.style.display=show?'none':'');
+  });
+  // always keep total row visible
+  tbody.querySelectorAll('tr:not(.agent-main-row):not(.agent-hour-row)').forEach(r=>r.style.display='');
+}
 function toggleAgentHours(rowId){
   const rows=document.querySelectorAll('[data-parent="'+rowId+'"]');
   const tog=document.getElementById('tog-'+rowId);
