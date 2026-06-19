@@ -460,6 +460,7 @@ function funnelCell(val,denom,color){
 function fmt$(n){ return '$'+Math.round(n).toLocaleString(); }
 const CLOSERS=new Set(['peter godwin','adam elqaza','diego acuna','alon yomorta','abed al serwan','josh hallwork','toha serwan','parth desai','robert whitmer','alexander wahlberg','artin namjoo','omar tayara','aj valipour','tyler mason','neka bullock','don bell','faisal habhab','amir moayeri','daniel arreola','shayan bakhoda','chuvar maestas','eileen beeson','logan insuaste','paul sims','john tade','dylan gallagher','lindsey magnusen','angel espraza','logan apana','brian smith','emren salim']);
 const RETENTION=new Set(['eli riano']);
+const OPENERS=new Set(['tabitha jaggers','mercy morse','joselyn lorenzo','alex tulkoff','jaiden lopez','stanley randolph','spencer porterfield','jon stultz','walter urbina','mark claros','jennifer saldana','riley malone','joseph nassif','darrin ford','abdelrhaman nianaa','liz arredondo','mohamad dadou']);
 let _agentRoleFilter='all';
 function filterAgents(type){
   if(type){
@@ -1072,7 +1073,7 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
     document.getElementById('agentBody').innerHTML=rows.map((a,i)=>{
       const convPct=a.gt5m>0&&a.enr>0?pct(a.enr,a.gt5m):'—';
       const shortCls=a.shortPct>55?'bad':'';
-      const isOpener=!CLOSERS.has(a.name.toLowerCase());
+      const isOpener=OPENERS.has(a.name.toLowerCase());
       const gt2mPct=a.calls>0?a.gt2m/a.calls*100:0;
       const gt2mCell=isOpener
         ? `${a.gt2m}<div style="font-size:9px;font-weight:700;color:${gt2mPct>=50?'var(--green-dk)':'var(--red)'};margin-top:1px">${gt2mPct.toFixed(0)}%</div>`
@@ -1103,7 +1104,7 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
         </tr>`;
       }).join('');
       const nameLC=a.name.toLowerCase();
-      const openerTag=RETENTION.has(nameLC)?'<span class="tag-retention">Retention</span>':isOpener?'<span class="tag-opener">Opener</span>':'';
+      const openerTag=RETENTION.has(nameLC)?'<span class="tag-retention">Retention</span>':CLOSERS.has(nameLC)?'':isOpener?'<span class="tag-opener">Opener</span>':'';
       const agentCamps=[...(agentCampsMap[a.name]||[])].join('|');
       return `<tr class="agent-main-row" id="${rowId}" data-camps="${agentCamps}" style="cursor:pointer" onclick="toggleAgentHours('${rowId}')">
         <td style="text-align:left"><span class="agent-toggle" id="tog-${rowId}">▶</span> ${a.name} ${openerTag}</td>
