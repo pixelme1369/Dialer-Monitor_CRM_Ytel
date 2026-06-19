@@ -522,7 +522,7 @@ function renderMissedCallbacks(){
   const data=(window._missedData||[]).filter(d=>!camp||d.camps.includes(camp));
   const enrolled=data.filter(d=>d.enrolled);
   const other=data.filter(d=>!d.enrolled);
-  const rowHtml=arr=>arr.map(d=>`<div style="padding:4px 0;border-bottom:1px solid var(--border)"><span style="font-family:monospace;font-weight:600">${d.phone}</span> <span style="color:var(--text-muted);font-size:11px">— timed out on: ${d.agents}</span>${d.camps.length?'<span style="margin-left:6px;font-size:10px;background:var(--gray-100);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--text-muted)">'+d.camps.join(', ')+'</span>':''}</div>`).join('')||'<div style="color:var(--text-muted);font-size:11px;padding:4px 0">None</div>';
+  const rowHtml=arr=>arr.map(d=>`<div style="padding:4px 0;border-bottom:1px solid var(--border)"><span style="font-family:monospace;font-weight:600">${d.phone}</span>${d.debt>0?'<span style="margin-left:8px;font-weight:700;color:var(--green-dk);font-size:11px">'+fmt$(d.debt)+'</span>':''} <span style="color:var(--text-muted);font-size:11px">— timed out on: ${d.agents}</span>${d.camps.length?'<span style="margin-left:6px;font-size:10px;background:var(--gray-100);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--text-muted)">'+d.camps.join(', ')+'</span>':''}</div>`).join('')||'<div style="color:var(--text-muted);font-size:11px;padding:4px 0">None</div>';
   document.getElementById('missedEnrolledCount').textContent='('+enrolled.length+')';
   document.getElementById('missedEnrolledList').innerHTML=rowHtml(enrolled);
   document.getElementById('missedOtherCount').textContent='('+other.length+')';
@@ -805,11 +805,17 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
   const anyEnrolledPhone=new Set();
   calls.forEach(r=>{ if(r['Cordoba Enrolled Date']||r['Enrolled Date']) anyEnrolledPhone.add(r._phone); });
   // Build full data array for filter function
+  // Build per-phone debt from calls (max Enrolled Debt seen for that phone)
+  const phoneDebt={};
+  calls.forEach(r=>{
+    if(r._phone&&r._debt>0) phoneDebt[r._phone]=Math.max(phoneDebt[r._phone]||0,r._debt);
+  });
   const missedData=missedPhones.map(p=>({
     phone:p,
     agents:[...(timeoutAgents[p]||[])].join(', ')||'—',
     camps:[...(timeoutCamps[p]||[])],
-    enrolled:anyEnrolledPhone.has(p)
+    enrolled:anyEnrolledPhone.has(p),
+    debt:phoneDebt[p]||0
   }));
   const allMissedCamps=[...new Set(missedData.flatMap(d=>d.camps))].sort();
   const missedCampSel=document.getElementById('missedCampFilter');
