@@ -796,7 +796,8 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
   });
   const calledBack=new Set();
   calls.forEach(r=>{
-    if(r._dir==='outbound'&&r._phone&&timeoutTs[r._phone]){
+    // Any call (inbound or outbound) after the last timeout that isn't itself a timeout = handled
+    if(r._phone&&timeoutTs[r._phone]&&r._status!=='TIMEOT'){
       const ts=parseTs(r['call_date']||r['date']||'');
       if(ts>timeoutTs[r._phone]) calledBack.add(r._phone);
     }
