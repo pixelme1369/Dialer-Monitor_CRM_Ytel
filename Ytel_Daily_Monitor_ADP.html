@@ -282,12 +282,6 @@ tbody td:first-child{text-align:left;font-weight:600;color:var(--text)}
     </div>
   </div>
 
-  <!-- ABSENT / ZERO-CALL AGENTS -->
-  <div class="card" id="absentCard" style="display:none">
-    <div class="card-title" style="color:var(--text-muted)">Absent / Zero Calls Today</div>
-    <div id="absentAgents" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:4px"></div>
-  </div>
-
   <!-- AGENT FUNNEL RATIO TABLE -->
   <div class="card">
     <div class="card-title">Agent call funnel — % of total calls <span class="card-title-sub">Each % = bucket count ÷ agent's total calls. <2min = calls lost under 2 min. >2/>5/>10/>15/>30 = cumulative calls that reached that duration. Click column to sort.</span></div>
@@ -494,7 +488,7 @@ function filterAgents(type){
     }).sort((a,b)=>b.calls-a.calls);
     // apply role filter
     if(_agentRoleFilter==='closer') rows=rows.filter(a=>CLOSERS.has(a.name.toLowerCase()));
-    if(_agentRoleFilter==='opener') rows=rows.filter(a=>!CLOSERS.has(a.name.toLowerCase()));
+    if(_agentRoleFilter==='opener') rows=rows.filter(a=>OPENERS.has(a.name.toLowerCase()));
     document.getElementById('agentCount').textContent=rows.length+' agents ('+campFilter+')';
     // re-render using existing render function
     window.renderAgentBody(rows);
@@ -505,7 +499,7 @@ function filterAgents(type){
   if(window._agentAllRows){
     let rows=window._agentAllRows;
     if(_agentRoleFilter==='closer') rows=rows.filter(a=>CLOSERS.has(a.name.toLowerCase()));
-    if(_agentRoleFilter==='opener') rows=rows.filter(a=>!CLOSERS.has(a.name.toLowerCase()));
+    if(_agentRoleFilter==='opener') rows=rows.filter(a=>OPENERS.has(a.name.toLowerCase()));
     document.getElementById('agentCount').textContent=rows.length+' agents';
     window.renderAgentBody(rows);
   }
@@ -1110,7 +1104,7 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
         </tr>`;
       }).join('');
       const nameLC=a.name.toLowerCase();
-      const openerTag=RETENTION.has(nameLC)?'<span class="tag-retention">Retention</span>':CLOSERS.has(nameLC)?'':isOpener?'<span class="tag-opener">Opener</span>':'';
+      const openerTag=RETENTION.has(nameLC)?'<span class="tag-retention">Retention</span>':isOpener?'<span class="tag-opener">Opener</span>':'';
       const agentCamps=[...(agentCampsMap[a.name]||[])].join('|');
       return `<tr class="agent-main-row" id="${rowId}" data-camps="${agentCamps}" style="cursor:pointer" onclick="toggleAgentHours('${rowId}')">
         <td style="text-align:left"><span class="agent-toggle" id="tog-${rowId}">▶</span> ${a.name} ${openerTag}</td>
@@ -1158,31 +1152,6 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
   }
   renderAgentBody(agentRows);
 
-  // ── Absent / zero-call agents ──
-  // Build a map of lowercase→actual full_name from the entire uploaded file
-  const activeAgentNames=new Set(Object.keys(agentMap).map(n=>n.toLowerCase()));
-  const allFileAgents={};
-  (mergedRaw||[]).forEach(r=>{
-    const n=(r['full_name']||r['user']||'').trim();
-    if(!n||n==='VDCL'||n==='VDAD') return;
-    const lc=n.toLowerCase();
-    if(!allFileAgents[lc]) allFileAgents[lc]=n;
-  });
-  const absentAgents=Object.entries(allFileAgents)
-    .filter(([lc])=>!activeAgentNames.has(lc))
-    .map(([lc,display])=>({lc,display}));
-  const absentEl=document.getElementById('absentAgents');
-  if(absentAgents.length&&absentEl){
-    const toDisplay=({lc,display})=>{
-      const tag=RETENTION.has(lc)?'<span class="tag-retention">Retention</span>':OPENERS.has(lc)?'<span class="tag-opener">Opener</span>':'';
-      return `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border:1px solid var(--border);border-radius:4px;font-size:12px;color:var(--text-muted);background:var(--gray-100)">${display}${tag}</span>`;
-    };
-    absentEl.innerHTML=absentAgents.map(toDisplay).join('');
-    document.getElementById('absentCard').style.display='';
-  } else if(absentEl){
-    document.getElementById('absentCard').style.display='none';
-  }
-
   // ── Agent funnel ratio table ──
   const fcell=(n,d,color)=>{
     const pct=d>0?((n/d)*100).toFixed(1)+'%':'0%';
@@ -1190,7 +1159,7 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
   };
   document.getElementById('funnelBody').innerHTML=agentRows.map(a=>`
     <tr>
-      <td style="text-align:left;font-weight:600;color:var(--text)">${a.name}${RETENTION.has(a.name.toLowerCase())?'<span class="tag-retention">Retention</span>':!CLOSERS.has(a.name.toLowerCase())?'<span class="tag-opener">Opener</span>':''}</td>
+      <td style="text-align:left;font-weight:600;color:var(--text)">${a.name}${RETENTION.has(a.name.toLowerCase())?'<span class="tag-retention">Retention</span>':OPENERS.has(a.name.toLowerCase())?'<span class="tag-opener">Opener</span>':''}</td>
       <td>${a.calls}</td>
       <td>${fcell(a.lt2m,a.calls,'var(--red)')}</td>
       <td>${fcell(a.gt2m,a.calls,null)}</td>
