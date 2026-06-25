@@ -456,6 +456,26 @@ tbody td:first-child{text-align:left;font-weight:600;color:var(--text)}
     </div>
   </div>
 
+  <!-- DPC DROPPED — NEVER CALLED BACK -->
+  <div class="card" id="dpcCard" style="display:none">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="card-title" style="color:var(--red);margin:0">⚠ DPC — Dropped Calls Never Called Back</div>
+      <select id="dpcCampFilter" onchange="renderDpcDrops()" style="margin-left:auto;font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--white);color:var(--text);cursor:pointer">
+        <option value="">All Campaigns</option>
+      </select>
+    </div>
+    <div class="two-col" style="gap:16px;align-items:start">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Enrolled Clients <span id="dpcEnrolledCount" style="font-size:10px;font-weight:400;color:var(--text-muted)"></span></div>
+        <div id="dpcEnrolledList" style="font-size:12px;color:var(--text);line-height:1.9"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Other Calls <span id="dpcOtherCount" style="font-size:10px;font-weight:400;color:var(--text-muted)"></span></div>
+        <div id="dpcOtherList" style="font-size:12px;color:var(--text);line-height:1.9"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- OPENERS TRANSFER BREAKDOWN -->
   <div class="card" id="openerTransferCard" style="display:none">
     <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
@@ -944,6 +964,17 @@ function renderMissedCallbacks(){
   document.getElementById('missedOtherCount').textContent='('+other.length+')';
   document.getElementById('missedOtherList').innerHTML=rowHtml(other);
 }
+function renderDpcDrops(){
+  const camp=document.getElementById('dpcCampFilter').value;
+  const data=(window._dpcData||[]).filter(d=>!camp||d.camps.includes(camp));
+  const enrolled=data.filter(d=>d.enrolled);
+  const other=data.filter(d=>!d.enrolled);
+  const rowHtml=arr=>arr.map(d=>`<div style="padding:4px 0;border-bottom:1px solid var(--border)"><span style="font-family:monospace;font-weight:600">${d.phone}</span>${d.debt>0?'<span style="margin-left:8px;font-weight:700;color:var(--green-dk);font-size:11px">'+fmt$(d.debt)+'</span>':''} <span style="color:var(--text-muted);font-size:11px">— dropped by: ${d.agents}</span>${d.camps.length?'<span style="margin-left:6px;font-size:10px;background:var(--gray-100);border:1px solid var(--border);border-radius:3px;padding:1px 5px;color:var(--text-muted)">'+d.camps.join(', ')+'</span>':''}</div>`).join('')||'<div style="color:var(--text-muted);font-size:11px;padding:4px 0">None</div>';
+  document.getElementById('dpcEnrolledCount').textContent='('+enrolled.length+')';
+  document.getElementById('dpcEnrolledList').innerHTML=rowHtml(enrolled);
+  document.getElementById('dpcOtherCount').textContent='('+other.length+')';
+  document.getElementById('dpcOtherList').innerHTML=rowHtml(other);
+}
 function toggleCampAgents(rowId){
   const rows=document.querySelectorAll('[data-parent="'+rowId+'"]');
   const tog=document.getElementById('tog-'+rowId);
@@ -1258,6 +1289,52 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
   const card=document.getElementById('missedCallbackCard');
   if(missedPhones.length){ card.style.display=''; renderMissedCallbacks(); }
   else card.style.display='none';
+
+  // ── DPC dropped calls never called back ──────────────────────────────────────
+  // Per DPC event: flag if no non-DPC call to that phone occurred after that event
+  const dpcEvents={};  // phone → [{ts, agent, camp}]
+  calls.forEach(r=>{
+    if(r._status==='DPC'&&r._phone){
+      if(!dpcEvents[r._phone]) dpcEvents[r._phone]=[];
+      dpcEvents[r._phone].push({ts:parseTs(r['call_date']||r['date']||''),agent:r._name,camp:r._campaign});
+    }
+  });
+  // All non-DPC call timestamps per phone
+  const nonDpcTs={};  // phone → [ts, ...]
+  calls.forEach(r=>{
+    if(r._phone&&r._status!=='DPC'){
+      if(!nonDpcTs[r._phone]) nonDpcTs[r._phone]=[];
+      nonDpcTs[r._phone].push(parseTs(r['call_date']||r['date']||''));
+    }
+  });
+  // Flag phones that have at least one DPC with no non-DPC follow-up after it
+  const dpcFlagged={};  // phone → {agents:Set, camps:Set}
+  Object.entries(dpcEvents).forEach(([phone,events])=>{
+    const followUps=nonDpcTs[phone]||[];
+    events.forEach(ev=>{
+      const hasFollowup=followUps.some(t=>t>ev.ts);
+      if(!hasFollowup){
+        if(!dpcFlagged[phone]) dpcFlagged[phone]={agents:new Set(),camps:new Set()};
+        if(ev.agent) dpcFlagged[phone].agents.add(ev.agent);
+        if(ev.camp) dpcFlagged[phone].camps.add(ev.camp);
+      }
+    });
+  });
+  const dpcPhones=Object.keys(dpcFlagged);
+  const dpcData=dpcPhones.map(p=>({
+    phone:p,
+    agents:[...dpcFlagged[p].agents].join(', ')||'—',
+    camps:[...dpcFlagged[p].camps],
+    enrolled:anyEnrolledPhone.has(p),
+    debt:phoneDebt[p]||0
+  }));
+  const allDpcCamps=[...new Set(dpcData.flatMap(d=>d.camps))].sort();
+  const dpcCampSel=document.getElementById('dpcCampFilter');
+  dpcCampSel.innerHTML='<option value="">All Campaigns</option>'+allDpcCamps.map(c=>`<option value="${c}">${c}</option>`).join('');
+  window._dpcData=dpcData;
+  const dpcCard=document.getElementById('dpcCard');
+  if(dpcPhones.length){ dpcCard.style.display=''; renderDpcDrops(); }
+  else dpcCard.style.display='none';
   const vdclAfterHours=vdclCalls.filter(r=>parseInt(r._hour)>=18).length;
   const shortPct=deadCalls/total*100;
   const dropPct=drops/total*100;
