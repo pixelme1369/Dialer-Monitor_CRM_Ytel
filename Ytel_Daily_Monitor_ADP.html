@@ -1135,6 +1135,15 @@ function runAnalysis(){
 }
 
 function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPhones, totalEnrolledCount, totalDebtSum, dateStr, enrolledPhoneAgent){
+  // First call timestamp per enrolled phone — enrollment is credited to that call's campaign
+  const enrolledFirstCallTs={};
+  calls.forEach(r=>{
+    const phone=(r['phone_number']||r['phone_number_dialed']||'').trim();
+    if(!enrolledPhones.has(phone)) return;
+    const ts=parseTs(r['call_date']||r['date']||'');
+    if(!enrolledFirstCallTs[phone]||ts<enrolledFirstCallTs[phone]) enrolledFirstCallTs[phone]=ts;
+  });
+
   // Normalize call fields
   calls.forEach(r=>{
     r._sec=parseInt(r['length_in_sec']||r['duration']||r['Duration']||r['talk_sec']||0,10)||0;
@@ -1148,8 +1157,7 @@ function buildDashboard(calls, enrolledPhones, agentEnrollCredit, agentEnrollPho
     r._hour=(String(r['call_date']||r['date']||'')).slice(11,13)||'00';
     r._ug=(r['user_group']||'').trim();
     r._phone=(r['phone_number']||r['phone_number_dialed']||'').trim();
-    const _ep=enrolledPhoneAgent&&enrolledPhoneAgent[r._phone];
-    r._enrolled=!!(_ep && parseTs(r['call_date']||r['date']||'')=== _ep.ts);
+    r._enrolled=!!(enrolledPhoneAgent&&enrolledPhoneAgent[r._phone] && parseTs(r['call_date']||r['date']||'')===enrolledFirstCallTs[r._phone]);
     r._debt=parseDebt(r['Enrolled Debt']||0);
     r._crmStatus=(r['CRM Status']||'').trim();
   });
