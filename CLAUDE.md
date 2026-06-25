@@ -15,7 +15,7 @@ No framework, no build step — vanilla JS + SheetJS 0.18.5 + Chart.js 4.4.0 via
 - Keep explanations under 5 sentences.
 - Ask before changing business logic.
 - Run JS syntax check after edits: `node -e "const fs=require('fs');const h=fs.readFileSync('Ytel_Daily_Monitor_ADP.html','utf8');const s=h.match(/<script>([\s\S]*?)<\/script>/g);s.forEach((b,i)=>{try{new Function(b.replace(/<\/?script>/g,''));console.log('OK',i);}catch(e){console.log('ERR',i,e.message);}});"`
-- Always push to branch `claude/confident-allen-ddaf00` on `pixelme1369/Ytel_Daily_Monitor_ADP`, then merge to `main` when asked.
+- Always push to branch `claude/blissful-curie-pvg620` on `pixelme1369/Ytel_Daily_Monitor_ADP`, then merge to `main` when asked.
 
 ## Agent Roles
 
@@ -27,6 +27,13 @@ const OPENERS = new Set([...]);    // openers — show Opener tag, show >2min % 
 
 Agents not in any set show no role tag.
 All three sets are defined at lines ~588–590 of `Ytel_Daily_Monitor_ADP.html`.
+
+### Agent Name Matching
+
+- All role lookups are done with `.toLowerCase()` — names in the sets must be lowercase
+- When an agent's name has a known alternate spelling in the data, **add both spellings** to the set
+  - Example: `'jon stultz'` and `'jon stults'` are both in OPENERS because the data has been seen with both spellings
+- When a user reports an agent is "missing from the report", check if it's a spelling mismatch before assuming the agent isn't in the set
 
 ## Enrollment Logic
 
@@ -46,8 +53,23 @@ All three sets are defined at lines ~588–590 of `Ytel_Daily_Monitor_ADP.html`.
 ### Enrolled column in Campaign / Queue Breakdown
 
 - `_enrolled` is set on exactly one row per enrolled phone (the first call row)
-- This prevents double-counting across campaigns (old bug: every row for the phone had `_enrolled=true`)
-- A warning note is shown in the section header explaining the per-row nature
+- This prevents double-counting across campaigns (old bug: every row for the phone had `_enrolled=true`, so every campaign the phone touched counted +1)
+- A warning note (⚠️) is shown in the section header — hover it for the full explanation
+- The displayed number uses `s.enroll` (raw row count); `s.enrolledPhones` (Set) is used for the clickable phone modal
+
+### Enrolled column in Agent Performance Table
+
+- Uses `agentEnrollCredit[k].count` (unique enrolled phones per agent) — **never** `d.enr`
+- `d.enr` is row-based and can be lower than actual credit when `Assigned To` credits an agent whose rows are not the max-timestamp rows
+- The phone list shown on click comes from `agentEnrollPhones[k]` — always in sync with `credit.count`
+- Implementation: `enr: credit.count, debt: credit.debt` in `buildRowsFromMap` (line ~619)
+
+### Campaign `1000` and Agent Outbound
+
+- Campaign `1000` = agent outbound dialer (closer calls out to client directly)
+- It is NOT a source campaign — do not attribute enrollments to it
+- If a phone first came in on TransferK, then the closer called back on `1000`, the enrollment belongs to **TransferK**
+- This is correctly handled by the first-call attribution rule above
 
 ## Hourly Breakdown Logic
 
@@ -137,7 +159,25 @@ Ranking table below the summary. Shows every opener agent sorted by transfer rat
 
 ## Branch & Deploy
 
-- Development branch: `claude/confident-allen-ddaf00`
+- Development branch: `claude/blissful-curie-pvg620`
 - Repo: `pixelme1369/Ytel_Daily_Monitor_ADP`
 - Merge to `main` when user asks to ship
 - No CI, no build — just open the HTML file in Chrome
+
+## Call Flow Patterns (for interpreting raw data)
+
+Understanding how calls flow helps debug enrollment and campaign attribution:
+
+| Pattern | What it means |
+|---------|---------------|
+| Phone has CLtrns on TransferK → SALE on AGENTDIRECT | Opener transferred to closer's direct queue; enrollment = TransferK |
+| Phone has CLtrns on TransferK → N/SALE on AGENTDIRECT → SALE on 1000 | Opener transferred → closer missed then called back outbound; enrollment = TransferK |
+| `Assigned To` populated | Explicit agent credit override; always use this over `full_name` for enrollment credit |
+| `campaign_id = 1000` | Agent outbound dialer — not a source campaign |
+| `campaign_id = AGENTDIRECT` | Call routed to a specific agent's queue (post-transfer or callback) |
+| `campaign_id = TransferK` | Inbound queue from opener transfer — the originating source |
+| `status = CLtrns` | Call Center Transfer — opener handed off to a closer |
+| `status = CC` | Current Client — post-enrollment follow-up call |
+| `status = SALE` | Enrollment closed |
+| `status = N` | No Answer |
+| `status = TIMEOT` | Caller timed out in queue — tracked for Missed Callbacks |
